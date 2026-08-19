@@ -19,14 +19,8 @@ import {
   UIManager,
   Keyboard,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-} from 'react-native-reanimated';
 import {
-  X,
+  ArrowLeft,
   Heart,
   Send,
   Trash2,
@@ -44,23 +38,15 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-interface ReelCommentSheetProps {
-  visible: boolean;
+interface ReelCommentsScreenProps {
   reelId: string;
   creatorId: string;
-  commentCount: number;
-  onClose: () => void;
-  onCommentCountChange: (count: number) => void;
 }
 
-export function ReelCommentSheet({
-  visible,
+export function ReelCommentsScreen({
   reelId,
   creatorId,
-  commentCount,
-  onClose,
-  onCommentCountChange,
-}: ReelCommentSheetProps) {
+}: ReelCommentsScreenProps) {
   const { user } = useAuth();
   const toast = useToast();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -72,35 +58,13 @@ export function ReelCommentSheet({
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
   const [repliesMap, setRepliesMap] = useState<Record<string, Comment[]>>({});
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
-  const [localCount, setLocalCount] = useState(commentCount);
-
-  const translateY = useSharedValue(600);
-  const backdropOpacity = useSharedValue(0);
+  const [localCount, setLocalCount] = useState(0);
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const inputRef = useRef<TextInput>(null);
   const replyInputRef = useRef<TextInput>(null);
-  const prevCountRef = useRef<number>(commentCount);
-
-  // Sync local count when prop changes
-  useEffect(() => {
-    setLocalCount(commentCount);
-    prevCountRef.current = commentCount;
-  }, [commentCount]);
-
-  // Animate sheet visibility
-  useEffect(() => {
-    if (visible) {
-      translateY.value = withSpring(0, { damping: 28, stiffness: 280, mass: 0.8 });
-      backdropOpacity.value = withTiming(0.5, { duration: 250 });
-    } else {
-      translateY.value = withSpring(600, { damping: 30, stiffness: 300 });
-      backdropOpacity.value = withTiming(0, { duration: 200 });
-    }
-  }, [visible, translateY, backdropOpacity]);
-
   // Subscribe to real-time comments
   useEffect(() => {
-    if (!visible || !reelId) return;
+    if (!reelId) return;
     setLoading(true);
     unsubscribeRef.current = reelRepository.subscribeToReelComments(reelId, (newComments) => {
       // Separate top-level comments from replies
@@ -124,15 +88,7 @@ export function ReelCommentSheet({
         unsubscribeRef.current = null;
       }
     };
-  }, [visible, reelId]);
-
-  // Separate effect to notify parent of count changes (fixes "Cannot update a component" error)
-  useEffect(() => {
-    if (localCount !== prevCountRef.current) {
-      prevCountRef.current = localCount;
-      onCommentCountChange(localCount);
-    }
-  }, [localCount]); // Only depend on localCount, not the callback
+  }, [reelId]);
 
   const handleSubmitComment = useCallback(async () => {
     if (!inputText.trim() || !user || submitting) return;
@@ -318,15 +274,6 @@ export function ReelCommentSheet({
 
   const isVideoOwner = user?.id === creatorId;
 
-  const backdropStyle = useAnimatedStyle(() => ({
-    opacity: backdropOpacity.value,
-    pointerEvents: backdropOpacity.value > 0.1 ? 'auto' as const : 'none' as const,
-  }));
-
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
-
   const renderComment = useCallback(({ item }: { item: Comment }) => {
     const isLiked = likedComments.has(item.id);
     const isExpanded = expandedReplies.has(item.id);
@@ -460,23 +407,13 @@ export function ReelCommentSheet({
   }, [comments]);
 
   return (
-    <>
-      {/* Backdrop */}
-      <Animated.View
-        style={[styles.backdrop, backdropStyle]}
-        pointerEvents={visible ? 'auto' : 'none'}
-      >
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
-      </Animated.View>
-
-      {/* Bottom sheet */}
-      <Animated.View style={[styles.sheet, sheetStyle]}>
-        <View style={styles.handle} />
+    <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{formatCount(localCount)} comments</Text>
-          <Pressable onPress={onClose} style={styles.closeBtn}>
-            <X size={20} color={colors.text} />
+          <Pressable onPress={() => router.back()} style={styles.closeBtn} hitSlop={12}>
+            <ArrowLeft size={20} color={colors.text} />
           </Pressable>
+          <Text style={styles.headerTitle}>{formatCount(localCount)} comments</Text>
+          <View style={styles.headerSpacer} />
         </View>
 
         {loading ? (
@@ -539,8 +476,7 @@ export function ReelCommentSheet({
             <Text style={styles.signInText}>Sign in to leave a comment</Text>
           </View>
         )}
-      </Animated.View>
-    </>
+    </View>
   );
 }
 

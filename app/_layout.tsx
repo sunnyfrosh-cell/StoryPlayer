@@ -68,6 +68,7 @@ export default function RootLayout() {
                         <Stack.Screen name="splash" />
                         <Stack.Screen name="onboarding" />
                         <Stack.Screen name="settings" />
+                        <Stack.Screen name="settings-preference" />
                         <Stack.Screen name="upload" />
                         <Stack.Screen name="dashboard" />
                         <Stack.Screen name="studio" />
@@ -83,6 +84,7 @@ export default function RootLayout() {
                         <Stack.Screen name="contact-support" />
                         <Stack.Screen name="legal" />
                         <Stack.Screen name="watch/[id]" />
+                        <Stack.Screen name="reel-comments" />
                         <Stack.Screen name="+not-found" />
                       </Stack>
                       <StatusBar style="light" />

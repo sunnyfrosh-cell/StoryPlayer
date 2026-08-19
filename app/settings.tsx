@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SharingShare from 'expo-sharing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ArrowLeft,
   Bell,
@@ -49,7 +50,7 @@ import {
 } from 'lucide-react-native';
 import { colors, spacing, radius, typography } from '@/theme';
 import { useAuth, useUser, useToast, useVideos } from '@/contexts';
-import { Avatar, Badge, Modal, CustomButton, OptionPickerModal, useOptionPicker } from '@/components';
+import { Avatar, Badge, Modal, CustomButton } from '@/components';
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
 
@@ -101,12 +102,36 @@ export default function SettingsScreen() {
   // Blocked users modal
   const [showBlockedModal, setShowBlockedModal] = useState(false);
 
-  // Content preference pickers
-  const languagePicker = useOptionPicker('English');
-  const themePicker = useOptionPicker('Dark');
-  const downloadQualityPicker = useOptionPicker('Auto');
-  const playbackSpeedPicker = useOptionPicker('1x');
-  const storageQualityPicker = useOptionPicker('Auto');
+  // Content preferences are edited on dedicated navigation screens.
+  const [language, setLanguage] = useState('English');
+  const [theme, setTheme] = useState('Dark');
+  const [downloadQuality, setDownloadQuality] = useState('Auto');
+  const [playbackSpeed, setPlaybackSpeed] = useState('1x');
+
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.multiGet([
+      'storyverse.preference.language',
+      'storyverse.preference.theme',
+      'storyverse.preference.downloadQuality',
+      'storyverse.preference.playbackSpeed',
+    ]).then((entries) => {
+      if (!active) return;
+      const values = Object.fromEntries(entries);
+      if (values['storyverse.preference.language']) setLanguage(values['storyverse.preference.language']);
+      if (values['storyverse.preference.theme']) setTheme(values['storyverse.preference.theme']);
+      if (values['storyverse.preference.downloadQuality']) setDownloadQuality(values['storyverse.preference.downloadQuality']);
+      if (values['storyverse.preference.playbackSpeed']) setPlaybackSpeed(values['storyverse.preference.playbackSpeed']);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
+  const openPreference = useCallback((preference: string, value: string) => {
+    router.push({
+      pathname: '/settings-preference',
+      params: { preference, value },
+    });
+  }, []);
 
   const languageOptions = [
     { label: 'English', value: 'English' },
@@ -238,29 +263,29 @@ export default function SettingsScreen() {
       label: 'Language',
       icon: Globe,
       type: 'link',
-      valueText: languagePicker.label,
-      onPress: languagePicker.open,
+      valueText: language,
+      onPress: () => openPreference('language', language),
     },
     {
       label: 'Theme',
       icon: Moon,
       type: 'link',
-      valueText: themePicker.label,
-      onPress: themePicker.open,
+      valueText: theme,
+      onPress: () => openPreference('theme', theme),
     },
     {
       label: 'Download quality',
       icon: Download,
       type: 'link',
-      valueText: downloadQualityPicker.label,
-      onPress: downloadQualityPicker.open,
+      valueText: downloadQuality,
+      onPress: () => openPreference('downloadQuality', downloadQuality),
     },
     {
       label: 'Video playback',
       icon: Play,
       type: 'link',
-      valueText: `Default speed: ${playbackSpeedPicker.label}`,
-      onPress: playbackSpeedPicker.open,
+      valueText: `Default speed: ${playbackSpeed}`,
+      onPress: () => openPreference('playbackSpeed', playbackSpeed),
     },
   ];
 
@@ -323,8 +348,8 @@ export default function SettingsScreen() {
       label: 'Download Quality',
       icon: Download,
       type: 'link',
-      valueText: storageQualityPicker.label,
-      onPress: storageQualityPicker.open,
+      valueText: downloadQuality,
+      onPress: () => openPreference('downloadQuality', downloadQuality),
     },
   ];
 
@@ -614,47 +639,6 @@ export default function SettingsScreen() {
         )}
       </Modal>
 
-      {/* Content preference pickers */}
-      <OptionPickerModal
-        visible={languagePicker.visible}
-        title="Language"
-        options={languageOptions}
-        selectedValue={languagePicker.value}
-        onSelect={languagePicker.select}
-        onClose={languagePicker.close}
-      />
-      <OptionPickerModal
-        visible={themePicker.visible}
-        title="Theme"
-        options={themeOptions}
-        selectedValue={themePicker.value}
-        onSelect={themePicker.select}
-        onClose={themePicker.close}
-      />
-      <OptionPickerModal
-        visible={downloadQualityPicker.visible}
-        title="Download Quality"
-        options={qualityOptions}
-        selectedValue={downloadQualityPicker.value}
-        onSelect={downloadQualityPicker.select}
-        onClose={downloadQualityPicker.close}
-      />
-      <OptionPickerModal
-        visible={playbackSpeedPicker.visible}
-        title="Default Playback Speed"
-        options={speedOptions}
-        selectedValue={playbackSpeedPicker.value}
-        onSelect={playbackSpeedPicker.select}
-        onClose={playbackSpeedPicker.close}
-      />
-      <OptionPickerModal
-        visible={storageQualityPicker.visible}
-        title="Download Quality"
-        options={qualityOptions}
-        selectedValue={storageQualityPicker.value}
-        onSelect={storageQualityPicker.select}
-        onClose={storageQualityPicker.close}
-      />
     </View>
   );
 }

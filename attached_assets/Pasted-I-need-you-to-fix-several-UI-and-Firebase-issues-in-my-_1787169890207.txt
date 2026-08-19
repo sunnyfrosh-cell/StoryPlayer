@@ -1,0 +1,210 @@
+I need you to fix several UI and Firebase issues in my React Native Expo application. Do not redesign the entire app. Keep the existing dark theme, purple styling, navigation structure, and overall UI. Only fix the problems described below.
+
+IMPORTANT:
+Do not use bottom sheets, slide-up panels, temporary modal pages, or components that animate upward from the bottom for the affected settings/profile screens.
+
+1. FIX THE EDIT PROFILE SCREEN
+
+The Edit Profile screen is currently rendering incorrectly.
+
+The "Display Name" field appears as a huge empty/blank dark area instead of a normal text input.
+
+Fix the Edit Profile screen so that:
+- Display Name is a normal visible TextInput.
+- The existing user's display name is loaded into the field.
+- The username/email and other existing profile information are loaded correctly where applicable.
+- The profile picture remains visible.
+- The user can edit their display name.
+- The save/check button saves the changes correctly to Firestore.
+- Do not create a giant blank container around the input.
+- Make the layout responsive on Android phones with different screen sizes.
+- Make sure the keyboard does not destroy the layout.
+- Do not use a bottom sheet for Edit Profile. It must be a normal full-screen navigation page.
+
+2. FIX CONTENT PREFERENCES
+
+In Settings, these options currently appear to open a blank/empty panel that briefly slides upward from the bottom and then disappears:
+
+- Language
+- Theme
+- Download quality
+- Video playback
+
+Do NOT use the current bottom-sheet implementation.
+
+Replace these interactions with proper dedicated screens using normal navigation.
+
+For example:
+
+Settings
+→ Language
+→ Language screen
+
+Settings
+→ Theme
+→ Theme screen
+
+Settings
+→ Download quality
+→ Download Quality screen
+
+Settings
+→ Video playback
+→ Video Playback screen
+
+Each page should open normally as a full-screen screen with:
+- Back button
+- Page title
+- Proper content
+- Working selection controls
+- Existing selected value displayed
+- Save/apply behavior where needed
+
+The screens must never appear as a blank panel, must never pop upward from the bottom, and must never immediately close.
+
+3. FIX THE REACT STATE ERROR
+
+I am getting this error:
+
+"Cannot update a component (ReelsScreen) while rendering a different component (ReelCommentSheet)"
+
+Find the cause.
+
+Do not call setState, state setters, navigation functions, or parent callbacks directly during React rendering.
+
+In particular inspect:
+- ReelCommentSheet.tsx
+- reels.tsx
+- handleCommentCountChange
+- setLocalCount
+
+Move any state-changing logic into event handlers or appropriate useEffect/useCallback logic.
+
+The comment sheet must be able to:
+- open normally
+- display comments
+- add comments
+- update the comment count
+- close normally
+
+4. FIX ALL FIRESTORE TRANSACTION ERRORS
+
+The application currently produces:
+
+"Firestore transactions require all reads to be executed before all writes."
+
+I am seeing this in:
+
+- likeRepository.toggle
+- reelRepository.toggleLike
+- reelRepository.toggleSave
+- reelRepository.addReelComment
+- reelRepository.toggleReelFollow
+- commentRepository.add
+
+Inspect the transaction code in the Firebase repository files.
+
+For every Firestore runTransaction():
+
+RULE:
+ALL transaction.get()/reads MUST happen before ANY transaction.set(), transaction.update(), or transaction.delete().
+
+Do not perform a read after a write inside the same transaction.
+
+Refactor the affected transactions so they follow this pattern:
+
+1. Read all required documents.
+2. Calculate the new state/count.
+3. Perform all writes only after all reads are finished.
+4. Return the result.
+
+Do not simply suppress the error or remove error logging.
+
+Make the actual transaction logic correct.
+
+5. FIX COMMENTS
+
+The comment button on Reels must work.
+
+When the user taps the comment button:
+- Open the comments screen/panel correctly.
+- Show existing comments.
+- Allow the user to type a comment.
+- Allow submitting a comment.
+- Update the comment count correctly.
+- Do not cause the React "Cannot update a component while rendering another component" error.
+- Do not cause the Firestore transaction read/write error.
+
+If the existing ReelCommentSheet is responsible for the problem, you may replace it with a proper dedicated Reel Comments screen instead of using a bottom sheet.
+
+6. REMOVE THE BLANK/POP-UP SCREEN BEHAVIOR
+
+Search the entire application for screens/components that are being opened as bottom sheets or temporary slide-up panels.
+
+Pay particular attention to:
+- Settings
+- Content Preferences
+- Edit Profile
+- Language
+- Theme
+- Download Quality
+- Video Playback
+- Comment screens
+- Any screen that becomes blank before disappearing
+
+Where a bottom sheet is unnecessary, replace it with normal Expo Router navigation.
+
+The desired behavior is:
+
+User taps an option
+→ navigate to a proper full-screen page
+→ page displays its content
+→ user can interact with it
+→ user presses Back
+→ returns to the previous screen.
+
+There should be NO:
+- blank screen sliding from bottom
+- empty dark rectangle
+- screen appearing and immediately disappearing
+- broken modal
+- invisible content
+- accidental bottom-sheet animation
+
+7. DO NOT BREAK EXISTING FEATURES
+
+Before changing anything, inspect the existing project structure and reuse the existing:
+- Firebase configuration
+- authentication
+- Firestore repositories
+- Expo Router
+- existing theme
+- existing components
+- existing navigation
+
+Do not create duplicate repositories or duplicate Firebase configurations.
+
+Do not change Firestore rules unless absolutely necessary for one of these specific errors.
+
+Do not remove working features.
+
+8. FINAL VERIFICATION
+
+After making the fixes, check the codebase for:
+
+- setState calls during render
+- transaction reads occurring after writes
+- broken navigation routes
+- empty screens
+- missing route files
+- incorrect modal/bottom-sheet navigation
+- undefined profile fields
+- invalid TextInput styling
+- missing Firestore document references
+
+Then give me a concise summary of:
+1. Files changed
+2. What was fixed
+3. Any remaining errors that require my attention
+
+Most importantly, do not just hide the errors. Fix the underlying causes.
