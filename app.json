@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "StoryVerse",
+    "slug": "storyverse",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "storyverse",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B0B0F"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.storyverse.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "StoryVerse needs camera access to record video content.",
+        "NSMicrophoneUsageDescription": "StoryVerse needs microphone access for video recording.",
+        "NSPhotoLibraryUsageDescription": "StoryVerse needs photo library access to upload videos and thumbnails.",
+        "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"],
+        "CFBundleDisplayName": "StoryVerse"
+      }
+    },
+    "android": {
+      "package": "com.storyverse.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0B0B0F"
+      },
+      "permissions": ["CAMERA", "RECORD_AUDIO", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": ["expo-router", "expo-font", "expo-web-browser", "expo-screen-orientation"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "storyverse"
+      }
+    }
+  }
+}

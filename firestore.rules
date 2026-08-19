@@ -1,0 +1,328 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // Helpers — minimal, no user-document lookups required
+    // ============================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    // ============================================================
+    // users — public profiles; owner edits own; counters open
+    // Anyone authenticated can update denormalized counter fields
+    // (followers, following, subscribers, totalViews, etc.) via
+    // transactions. Only the owner can change profile content.
+    // ============================================================
+    match /users/{uid} {
+      allow read: if true;
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid)
+        || isAdmin()
+        || (isSignedIn()
+            && request.resource.data.diff(resource).affectedKeys()
+              .hasOnly(['followersCount', 'followingCount', 'subscribersCount',
+                        'totalViews', 'totalLikes', 'videosCount', 'updatedAt']));
+      allow delete: if isAdmin();
+    }
+
+    // ============================================================
+    // videos — public read; creator owns; counters open
+    // Any authenticated user can update counter fields via
+    // transactions (views, likes, comments, bookmarks, shares).
+    // Only the creator can edit content fields or delete.
+    // ============================================================
+    match /videos/{videoId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.creatorId);
+      allow update: if isOwner(resource.data.creatorId)
+        || isAdmin()
+        || (isSignedIn()
+            && request.resource.data.diff(resource).affectedKeys()
+              .hasOnly(['viewsCount', 'likesCount', 'commentsCount',
+                        'bookmarksCount', 'sharesCount', 'trendingScore',
+                        'updatedAt']));
+      allow delete: if isOwner(resource.data.creatorId) || isAdmin();
+    }
+
+    // ============================================================
+    // reels — public read; creator owns; counters open
+    // Same pattern as videos: counter fields open to authenticated
+    // users via transactions; content fields owner-only.
+    // ============================================================
+    match /reels/{reelId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.creatorId);
+      allow update: if isOwner(resource.data.creatorId)
+        || isAdmin()
+        || (isSignedIn()
+            && request.resource.data.diff(resource).affectedKeys()
+              .hasOnly(['viewsCount', 'likesCount', 'commentsCount',
+                        'sharesCount', 'savesCount', 'updatedAt']));
+      allow delete: if isOwner(resource.data.creatorId) || isAdmin();
+    }
+
+    // ============================================================
+    // comments — public read; author owns; counters & pin open
+    // Any authenticated user can update likesCount, repliesCount,
+    // and isPinned (video creator pins comments). Only the author
+    // can edit the comment body or delete.
+    // ============================================================
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.authorId);
+      allow update: if isOwner(resource.data.authorId)
+        || isAdmin()
+        || (isSignedIn()
+            && request.resource.data.diff(resource).affectedKeys()
+              .hasOnly(['likesCount', 'repliesCount', 'isPinned', 'updatedAt']));
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+
+    // ============================================================
+    // likes (video likes) — public read; user owns their like
+    // ============================================================
+    match /likes/{likeId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // reelLikes — public read; user owns their like
+    // ============================================================
+    match /reelLikes/{likeId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // commentLikes — public read; user owns their like
+    // ============================================================
+    match /commentLikes/{likeId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // bookmarks — owner only (private collection)
+    // ============================================================
+    match /bookmarks/{bookmarkId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // reelSaves — owner only (private collection)
+    // ============================================================
+    match /reelSaves/{saveId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // follows — public read; follower owns the relationship
+    // ============================================================
+    match /follows/{followId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.followerId);
+      allow delete: if isOwner(resource.data.followerId);
+    }
+
+    // ============================================================
+    // subscriptions — public read; subscriber owns
+    // ============================================================
+    match /subscriptions/{subId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.subscriberId);
+      allow delete: if isOwner(resource.data.subscriberId);
+    }
+
+    // ============================================================
+    // notifications — owner only; any authenticated user can create
+    // Notifications are created by the user who performed an action
+    // (e.g., liking a video) but the userId field is the recipient.
+    // ============================================================
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isSignedIn();
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // playlists — public read for non-private; owner CRUD
+    // ============================================================
+    match /playlists/{playlistId} {
+      allow read: if resource.data.isPrivate == false
+        || isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // watchHistory — owner only (private collection)
+    // ============================================================
+    match /watchHistory/{historyId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // searchHistory — owner only (private collection)
+    // ============================================================
+    match /searchHistory/{searchId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // videoViews — authenticated read & write (view tracking)
+    // Used in transactions for dedup-based view counting.
+    // ============================================================
+    match /videoViews/{viewId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // ============================================================
+    // reelViews — authenticated read & write (view tracking)
+    // ============================================================
+    match /reelViews/{viewId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // ============================================================
+    // Reports & moderation
+    // ============================================================
+
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isOwner(request.resource.data.reporterId);
+      allow update, delete: if isAdmin();
+    }
+
+    match /commentReports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isOwner(request.resource.data.reporterId);
+      allow update, delete: if isAdmin();
+    }
+
+    match /adminReports/{adminReportId} {
+      allow read: if isAdmin();
+      allow create: if isOwner(request.resource.data.reporterId);
+      allow update, delete: if isAdmin();
+    }
+
+    // ============================================================
+    // User safety
+    // ============================================================
+
+    match /blockedUsers/{blockedId} {
+      allow read: if isOwner(resource.data.blockerId);
+      allow create: if isOwner(request.resource.data.blockerId);
+      allow delete: if isOwner(resource.data.blockerId);
+    }
+
+    // ============================================================
+    // Monetization
+    // ============================================================
+
+    match /donations/{donationId} {
+      allow read: if isSignedIn()
+        && (resource.data.fromUserId == request.auth.uid
+            || resource.data.toCreatorId == request.auth.uid)
+        || isAdmin();
+      allow create: if isOwner(request.resource.data.fromUserId);
+      allow update, delete: if isAdmin();
+    }
+
+    match /walletTransactions/{txId} {
+      allow read: if isOwner(resource.data.creatorId) || isAdmin();
+      allow create: if isOwner(request.resource.data.creatorId);
+      allow update, delete: if isAdmin();
+    }
+
+    match /withdrawals/{withdrawalId} {
+      allow read: if isOwner(resource.data.creatorId) || isAdmin();
+      allow create: if isOwner(request.resource.data.creatorId);
+      allow update: if isOwner(resource.data.creatorId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /premiumMemberships/{membershipId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ============================================================
+    // Analytics & admin content
+    // ============================================================
+
+    match /videoAnalytics/{analyticsId} {
+      allow read: if isSignedIn() || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /adPlacements/{adId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ============================================================
+    // Uploads & settings — owner only
+    // ============================================================
+
+    match /uploads/{uploadId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    match /settings/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid);
+      allow delete: if isOwner(uid);
+    }
+
+    // ============================================================
+    // Default deny — catch-all for any unmapped collection
+    // ============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

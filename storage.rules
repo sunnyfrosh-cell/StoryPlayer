@@ -1,0 +1,82 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ============================================================
+    // Helper functions
+    // ============================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isActiveUser() {
+      return isSignedIn()
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.suspendStatus != 'suspended';
+    }
+
+    // ============================================================
+    // Avatars — owner can read/write their own; public read
+    // ============================================================
+    match /avatars/{uid}/{fileName} {
+      allow read: if true;
+      allow write: if isOwner(uid) && isActiveUser();
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // ============================================================
+    // Cover images — owner can read/write their own; public read
+    // ============================================================
+    match /covers/{uid}/{fileName} {
+      allow read: if true;
+      allow write: if isOwner(uid) && isActiveUser();
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // ============================================================
+    // Videos — creator uploads their own; public read
+    // ============================================================
+    match /videos/{uid}/{fileName} {
+      allow read: if true;
+      allow write: if isOwner(uid) && isActiveUser();
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // ============================================================
+    // Video thumbnails — creator uploads their own; public read
+    // ============================================================
+    match /thumbnails/{videoId}/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() && isActiveUser();
+      allow delete: if isAdmin();
+    }
+
+    // ============================================================
+    // General images — signed-in active users can upload; public read
+    // ============================================================
+    match /images/{folder}/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() && isActiveUser();
+      allow delete: if isAdmin();
+    }
+
+    // ============================================================
+    // Default deny
+    // ============================================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
