@@ -1,0 +1,65 @@
+Fix the remaining AsyncStorage native-module error only. Do not modify the Reel/video functionality, Reel comments UI, Cloudinary configuration, or any unrelated files.
+
+Current runtime error:
+
+AsyncStorageError: Native module is null, cannot access legacy storage
+
+The project uses @react-native-async-storage/async-storage and the Settings screen has already been correctly changed from the removed multiGet() API to getMany().
+
+The problem now appears to be that the native AsyncStorage module is not included/loaded in the currently running Expo Android app, not that the JavaScript API is wrong.
+
+Please do the following:
+
+Inspect package.json, package-lock.json, Expo SDK version, React Native version, and the installed @react-native-async-storage/async-storage version.
+
+Verify that AsyncStorage is installed using the Expo-compatible installation/version:
+
+npx expo install @react-native-async-storage/async-storage
+
+Do not blindly upgrade to an incompatible version. Let Expo choose the compatible version for the project's current SDK.
+
+Run:
+
+npx expo-doctor
+
+and inspect any dependency/version mismatch related to Expo, React Native, or AsyncStorage.
+
+Determine whether this project is currently running through Expo Go or a custom development build.
+If the native AsyncStorage module requires a rebuilt native app for this project's configuration, regenerate/rebuild the Android native app appropriately. Follow the project's existing workflow and do not unnecessarily change the project architecture.
+
+If android/ is generated through Expo CNG and a clean prebuild is appropriate, use:
+
+npx expo prebuild --clean
+
+and then rebuild:
+
+npx expo run:android
+
+Only do this after checking the project configuration so that existing native customizations are not accidentally destroyed.
+
+If the project is intended to use an EAS development build instead, configure/build the development client rather than forcing a local native build.
+
+Clear Metro's cache after the native rebuild:
+
+npx expo start --clear
+Do not create InternalBytecode.js. The ENOENT InternalBytecode.js message is secondary Metro symbolication noise and is not the root cause.
+Verify that Settings can call AsyncStorage without:
+Native module is null, cannot access legacy storage
+Verify that the existing Reel fixes remain untouched:
+Reel comments remain inside the safe area.
+Reel comment input remains above the bottom navigation/system area.
+Reel pause/play remains functional.
+Reel stops when navigating away.
+No duplicate/unmount VideoPlayer.pause() calls against released players.
+Verify Cloudinary remains configured with:
+EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME
+EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+Do not expose or hard-code any Cloudinary secret.
+At the end, report exactly:
+AsyncStorage version installed
+Expo SDK version
+whether Expo Go or development build is being used
+commands executed
+whether a native rebuild was required
+whether the Settings AsyncStorage error is gone
+whether any unrelated files were changed.
