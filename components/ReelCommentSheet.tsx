@@ -16,9 +16,9 @@ import {
   Platform,
   ActivityIndicator,
   LayoutAnimation,
-  UIManager,
   Keyboard,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   Heart,
@@ -34,10 +34,6 @@ import { timeAgo, formatCount } from '@/utils';
 import { reelRepository } from '@/firebase';
 import { useAuth, useToast } from '@/contexts';
 import type { Comment } from '@/types';
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 interface ReelCommentsScreenProps {
   reelId: string;
@@ -408,7 +404,11 @@ export function ReelCommentsScreen({
   }, [comments]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.content}
+      >
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.closeBtn} hitSlop={12}>
             <ArrowLeft size={20} color={colors.text} />
@@ -440,10 +440,7 @@ export function ReelCommentsScreen({
 
         {/* Input bar */}
         {user ? (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.inputBar}
-          >
+          <View style={styles.inputBar}>
             <ExpoImage
               source={user.avatarUrl ? { uri: user.avatarUrl } : undefined}
               style={styles.inputAvatar}
@@ -471,13 +468,14 @@ export function ReelCommentsScreen({
                 <Send size={18} color={inputText.trim() ? colors.primary : colors.textMuted} />
               )}
             </Pressable>
-          </KeyboardAvoidingView>
+          </View>
         ) : (
           <View style={styles.signInPrompt}>
             <Text style={styles.signInText}>Sign in to leave a comment</Text>
           </View>
         )}
-    </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -485,7 +483,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: spacing.sm,
+  },
+  content: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

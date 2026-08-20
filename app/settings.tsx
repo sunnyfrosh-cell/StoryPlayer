@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -112,21 +112,25 @@ export default function SettingsScreen() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      AsyncStorage.multiGet([
+      AsyncStorage.getMany([
         'storyverse.preference.language',
         'storyverse.preference.theme',
         'storyverse.preference.downloadQuality',
         'storyverse.preference.playbackSpeed',
       ]).then((entries) => {
         if (!active) return;
-        const values = Object.fromEntries(entries);
-        if (values['storyverse.preference.language']) setLanguage(values['storyverse.preference.language']);
-        if (values['storyverse.preference.theme']) setTheme(values['storyverse.preference.theme']);
-        if (values['storyverse.preference.downloadQuality']) setDownloadQuality(values['storyverse.preference.downloadQuality']);
-        if (values['storyverse.preference.playbackSpeed']) setPlaybackSpeed(values['storyverse.preference.playbackSpeed']);
-      }).catch(() => undefined);
+        if (entries['storyverse.preference.language']) setLanguage(entries['storyverse.preference.language']);
+        if (entries['storyverse.preference.theme']) setTheme(entries['storyverse.preference.theme']);
+        if (entries['storyverse.preference.downloadQuality']) setDownloadQuality(entries['storyverse.preference.downloadQuality']);
+        if (entries['storyverse.preference.playbackSpeed']) setPlaybackSpeed(entries['storyverse.preference.playbackSpeed']);
+      }).catch((error) => {
+        if (active) {
+          console.error('[Settings] Failed to load preferences:', error);
+          toast.error('Could not load saved preferences');
+        }
+      });
       return () => { active = false; };
-    }, []),
+    }, [toast]),
   );
 
   const openPreference = useCallback((preference: string, value: string) => {

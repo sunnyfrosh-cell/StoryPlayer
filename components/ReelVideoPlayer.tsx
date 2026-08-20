@@ -79,6 +79,17 @@ function ReelVideoPlayerBase({
     p.playbackRate = 1.0;
     p.timeUpdateEventInterval = 1.0;
   });
+  const mountedRef = useRef(true);
+  const playerRef = useRef<VideoPlayer | null>(player);
+
+  useEffect(() => {
+    playerRef.current = player;
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      playerRef.current = null;
+    };
+  }, [player]);
 
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapRef = useRef<{ time: number; x: number } | null>(null);
@@ -145,11 +156,12 @@ function ReelVideoPlayerBase({
   }, [player]);
 
   const pausePlayer = useCallback(() => {
-    player?.pause();
+    if (!mountedRef.current || playerRef.current !== player) return;
+    player.pause();
   }, [player]);
 
   const playPlayer = useCallback(() => {
-    if (!player) return;
+    if (!mountedRef.current || playerRef.current !== player) return;
     watchStartRef.current = 0;
     setHasFinished(false);
     player.play();
@@ -186,7 +198,7 @@ function ReelVideoPlayerBase({
   }, [controlsOpacity, showSpeedMenu]);
 
   const togglePlayPause = useCallback(() => {
-    if (!player) return;
+    if (!mountedRef.current || playerRef.current !== player) return;
     if (hasFinished) {
       // Replay from start
       player.currentTime = 0;
@@ -194,7 +206,7 @@ function ReelVideoPlayerBase({
       setHasFinished(false);
       setIsPlaying(true);
     } else if (isPlaying) {
-      player.pause();
+      pausePlayer();
       setIsPlaying(false);
     } else {
       player.play();
@@ -206,7 +218,7 @@ function ReelVideoPlayerBase({
       withTiming(0, { duration: 400 }),
     );
     resetControlsTimer();
-  }, [player, isPlaying, hasFinished, playPauseAnim, resetControlsTimer]);
+  }, [player, isPlaying, hasFinished, pausePlayer, playPauseAnim, resetControlsTimer]);
 
   const toggleMute = useCallback(() => {
     if (!player) return;
@@ -305,7 +317,7 @@ function ReelVideoPlayerBase({
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 2,
       onPanResponderGrant: () => {
         seekDragRef.current = true;
-        if (player) player.pause();
+        if (mountedRef.current && playerRef.current === player) player.pause();
       },
       onPanResponderMove: (_, gestureState) => {
         if (!player || duration <= 0) return;

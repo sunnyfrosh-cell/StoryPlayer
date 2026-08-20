@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 
 type MediaController = {
   pause: () => void;
@@ -98,14 +98,6 @@ export function useMediaPlaybackLifecycle({
     });
   }, [context.register, id]);
 
-  useFocusEffect(
-    useCallback(() => {
-      return () => {
-        pauseRef.current();
-      };
-    }, []),
-  );
-
   useEffect(() => {
     if (isActive && isFocused && context.appIsActive) {
       context.pauseOthers(id);
@@ -115,11 +107,6 @@ export function useMediaPlaybackLifecycle({
     }
   }, [context.appIsActive, context.pauseOthers, id, isActive, isFocused]);
 
-  useEffect(() => {
-    return () => {
-      pauseRef.current();
-    };
-  }, []);
 }
 
 export function useMediaPlaybackManager() {
