@@ -5,3 +5,9 @@ channel = "stable-25_05"
 
 [agent]
 expertMode = true
+
+[userenv]
+
+[userenv.shared]
+EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME = "dbj6koi4f"
+EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET = "JobConnect-upload"

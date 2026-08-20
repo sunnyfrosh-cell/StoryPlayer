@@ -1,0 +1,231 @@
+Continue debugging the StoryPlayer project from the current state. Do NOT undo the fixes that are already working.
+
+IMPORTANT SCOPE:
+The Reel video itself is already working correctly:
+- Play/pause works.
+- Video tracker/progress works.
+- Leaving/navigating away from a Reel stops the video correctly.
+- Do NOT redesign or modify normal Reel playback behavior.
+- Do NOT introduce changes to the regular video player.
+- The Reel comment safe-area issue is still a required fix.
+Only fix the actual errors below and the requested Cloudinary environment configuration.
+
+CURRENT ERRORS:
+
+1. ASYNCSTORAGE ERROR
+
+The app now shows:
+
+[Settings] Failed to load preferences:
+[AsyncStorageError: Native module is null, cannot access legacy storage]
+
+Stack points to:
+@react-native-async-storage/async-storage
+LegacyAsyncStorageImpl#getMany
+app/settings.tsx
+
+The project uses:
+@react-native-async-storage/async-storage 3.1.1
+
+The previous code changed multiGet() to getMany(), but the native module itself is unavailable. Therefore, do NOT simply change the API again.
+
+Inspect:
+- package.json
+- package-lock.json
+- app/settings.tsx
+- app/_layout.tsx
+- Expo configuration
+- AsyncStorage installation/configuration
+- whether the current Expo environment supports this AsyncStorage version
+- whether a native rebuild is required
+- whether the project is running in Expo Go or a development build
+
+Determine the correct solution for this exact Expo/React Native setup.
+
+The Settings screen must be able to load and save preferences without:
+"Native module is null, cannot access legacy storage"
+
+Do not silently replace AsyncStorage with another storage system unless it is actually necessary and compatible with the existing application architecture.
+
+If the current AsyncStorage version is incompatible with this Expo SDK, use the Expo-compatible version rather than blindly keeping 3.1.1.
+
+After fixing the dependency/configuration, make sure the code in settings.tsx uses the correct API for the installed version.
+
+2. REEL COMMENT SAFE AREA
+
+The Reel comment screen/sheet must NOT overlap the Android/iOS system navigation area.
+
+When the user taps the comment icon on a Reel:
+- Comments should open normally.
+- The comments UI must respect the bottom safe area.
+- The input field must remain above the system navigation bar.
+- The header/back button must respect the top safe area where applicable.
+- Keyboard behavior must remain correct.
+- Do not make comments unnecessarily fullscreen if the existing design is a sheet/modal.
+- Do not break scrolling.
+- Do not change Reel playback.
+
+Inspect:
+components/ReelCommentSheet.tsx
+
+Use the appropriate Expo/React Native safe-area approach already supported by this project.
+
+3. RELEASED REEL VIDEOPLAYER ERROR
+
+The previous logs contained:
+
+Error: Call to function 'VideoPlayer.pause' has been rejected.
+
+Caused by:
+Cannot use shared object that was already released
+
+Stack:
+components/ReelVideoPlayer.tsx
+contexts/MediaPlaybackContext.tsx
+
+The previous fix attempted to guard pause/play and remove duplicate cleanup pauses.
+
+Now inspect the CURRENT code carefully.
+
+The goal is:
+- Never call pause/play on a released VideoPlayer.
+- Do not call duplicate cleanup pauses.
+- Do not break the already-working behavior where leaving a Reel stops playback.
+- Preserve normal play/pause and progress tracking.
+- Avoid changing the regular/non-Reel video player.
+
+There must be a clean ownership/lifecycle model:
+- ReelVideoPlayer owns or safely references its player.
+- MediaPlaybackContext must not attempt to operate on a player after that player has been released.
+- Cleanup must be idempotent.
+- Focus/navigation cleanup must not race with native player destruction.
+
+Do not remove navigation cleanup entirely just to hide the error. The video must still stop when navigating away.
+
+4. INTERNALBYTECODE.JS ENOENT
+
+Metro repeatedly reports:
+
+ENOENT: no such file or directory, open
+'C:\\Users\\HomePC\\Downloads\\StoryPlayer (1)\\StoryPlayer\\InternalBytecode.js'
+
+This appears while Metro is trying to symbolicate/display the actual JavaScript error.
+
+Do NOT create a fake InternalBytecode.js file.
+
+Determine whether this is merely Metro's secondary error reporting/source-map issue caused by the original runtime exception. If appropriate, clear Metro/Expo caches after fixing the underlying errors.
+
+Do not make unrelated project changes just to hide this message.
+
+5. LAYOUT ANIMATION WARNING
+
+The warning:
+
+setLayoutAnimationEnabledExperimental is currently a no-op in the New Architecture.
+
+This is only a warning, not the primary runtime error.
+
+If the previous cleanup already removed the obsolete call, leave it removed. Do not change unrelated LayoutAnimation behavior.
+
+6. CLOUDINARY ENVIRONMENT SETUP
+
+Also create/configure a proper .env file for the project's Cloudinary configuration.
+
+IMPORTANT SECURITY:
+Do not hard-code Cloudinary credentials directly into React components.
+Do not commit secrets into source files.
+Use environment variables.
+
+First inspect the existing project to determine:
+- where Cloudinary is currently referenced
+- which Cloudinary values are needed
+- whether the app uses an upload preset
+- whether there is already any Cloudinary configuration
+- whether the project uses Expo's EXPO_PUBLIC_ environment variable convention
+
+Create a .env file using the appropriate Expo naming convention, for example:
+
+EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME=...
+EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET=...
+EXPO_PUBLIC_CLOUDINARY_API_KEY=...
+
+ONLY include variables that are actually required by the existing client-side implementation.
+
+Do NOT put a Cloudinary API secret in EXPO_PUBLIC_ variables or expose an API secret to the mobile client.
+
+If the existing Cloudinary implementation requires only:
+- cloud name
+- unsigned upload preset
+
+then only configure those.
+
+Then connect the environment variables to the appropriate Cloudinary upload/configuration code.
+
+Search the entire project for:
+- cloudinary
+- upload
+- upload preset
+- cloud name
+- image upload
+- video upload
+- fetch upload
+- FormData
+- any existing hard-coded Cloudinary values
+
+Replace hard-coded public Cloudinary configuration with environment variables where appropriate.
+
+If Cloudinary credentials are currently stored in source code, remove those hard-coded values and use the environment variables instead.
+
+Also add/update .gitignore so the local .env file containing configuration/secrets is not committed.
+
+If the project already has an .env.example convention, create/update:
+.env.example
+
+with placeholder values only, for example:
+
+EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
+EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
+
+Do NOT invent my actual Cloudinary values. If the actual values are already present somewhere in the project, identify them and move them into .env appropriately. If they are not available, leave placeholders and clearly tell me which values I need to provide.
+
+7. IMPORTANT: DO NOT MODIFY UNRELATED FEATURES
+
+Do not change:
+- Reel UI design except the comment safe-area problem.
+- Reel playback controls.
+- Reel tracker/progress behavior.
+- navigation behavior that is already working.
+- regular video player.
+- authentication.
+- database logic.
+- unrelated screens.
+- unrelated styling.
+
+8. VALIDATION
+
+After making the fixes:
+
+- Run git diff --check.
+- Search for remaining AsyncStorage multiGet usage.
+- Verify the AsyncStorage import is correct.
+- Verify package.json and lockfile are consistent.
+- Search for unsafe Cloudinary hard-coded credentials.
+- Verify .env is ignored.
+- Verify .env.example does not contain secrets.
+- Search ReelVideoPlayer and MediaPlaybackContext for every pause/play cleanup path.
+- Verify the comment UI has bottom safe-area handling.
+- Clear Expo/Metro cache if appropriate.
+- Run the strongest available static checks/typecheck/lint.
+
+If dependencies are not installed or a native rebuild is required, DO NOT claim the runtime issue is fixed until that limitation is clearly stated.
+
+At the end, give me:
+1. Files changed.
+2. Exactly what was fixed.
+3. Any dependency/version changes.
+4. Whether I need to run npm install / npx expo start -c / rebuild the development app.
+5. Whether the Cloudinary .env values were found or still need to be supplied.
+6. Any remaining errors that are only Metro/source-map noise versus actual application errors.
+
+MOST IMPORTANT:
+Fix the underlying problems rather than hiding the errors.
