@@ -27,6 +27,7 @@ import {
   CornerDownRight,
   ChevronDown,
 } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { colors, spacing, radius, typography } from '@/theme';
 import { timeAgo, formatCount } from '@/utils';
@@ -481,30 +482,10 @@ export function ReelCommentsScreen({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
+  container: {
+    flex: 1,
     backgroundColor: colors.background,
-    zIndex: 50,
-  },
-  sheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '70%',
-    backgroundColor: colors.backgroundElevated,
-    borderTopLeftRadius: radius['2xl'],
-    borderTopRightRadius: radius['2xl'],
-    zIndex: 51,
     paddingTop: spacing.sm,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.borderLight,
-    alignSelf: 'center',
-    marginBottom: spacing.sm,
   },
   header: {
     flexDirection: 'row',
@@ -523,6 +504,9 @@ const styles = StyleSheet.create({
   closeBtn: {
     padding: spacing.sm,
     marginRight: spacing.xs,
+  },
+  headerSpacer: {
+    width: 36,
   },
   listContent: {
     paddingHorizontal: spacing.base,

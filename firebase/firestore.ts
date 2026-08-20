@@ -656,6 +656,8 @@ export const videoRepository = {
     try {
       await runTransaction(database, async (tx: Transaction) => {
         const existingView = await tx.get(viewRef);
+        const creatorRef = creatorId ? doc(database, COLLECTIONS.users, creatorId) : null;
+        const creatorSnap = creatorRef ? await tx.get(creatorRef) : null;
         if (existingView.exists()) {
           const lastViewedAt = (existingView.data() as Record<string, unknown>).viewedAt as number ?? 0;
           // Already viewed within 24h — skip increment
@@ -664,6 +666,7 @@ export const videoRepository = {
           tx.update(viewRef, { viewedAt: now });
           return; // still don't increment — one view per 24h per user
         }
+        // WRITE PHASE: all reads above are complete.
         // No prior view record — create one and increment counters atomically
         tx.set(viewRef, {
           videoId: id,
@@ -675,13 +678,8 @@ export const videoRepository = {
           viewsCount: increment(1),
           trendingScore: increment(1),
         });
-        // Increment creator's totalViews if the creator profile exists
-        if (creatorId) {
-          const creatorRef = doc(database, COLLECTIONS.users, creatorId);
-          const creatorSnap = await tx.get(creatorRef);
-          if (creatorSnap.exists()) {
-            tx.update(creatorRef, { totalViews: increment(1) });
-          }
+        if (creatorRef && creatorSnap?.exists()) {
+          tx.update(creatorRef, { totalViews: increment(1) });
         }
       });
     } catch (err) {
@@ -770,7 +768,10 @@ export const commentRepository = {
 
     try {
       await runTransaction(database, async (tx: Transaction) => {
-        // Write the comment
+        const videoSnap = await tx.get(videoRef);
+        const parentSnap = parentRef ? await tx.get(parentRef) : null;
+
+        // WRITE PHASE: all reads above are complete.
         tx.set(newCommentRef, {
           videoId: data.videoId,
           authorId: data.authorId,
@@ -786,17 +787,11 @@ export const commentRepository = {
           createdAt: now,
           updatedAt: now,
         });
-        // Atomically increment video commentsCount
-        const videoSnap = await tx.get(videoRef);
         if (videoSnap.exists()) {
           tx.update(videoRef, { commentsCount: increment(1) });
         }
-        // Atomically increment parent repliesCount
-        if (parentRef) {
-          const parentSnap = await tx.get(parentRef);
-          if (parentSnap.exists()) {
-            tx.update(parentRef, { repliesCount: increment(1) });
-          }
+        if (parentRef && parentSnap?.exists()) {
+          tx.update(parentRef, { repliesCount: increment(1) });
         }
       });
     } catch (err) {
@@ -830,24 +825,22 @@ export const commentRepository = {
 
     try {
       await runTransaction(database, async (tx: Transaction) => {
-        // Delete the comment itself
+        const vSnap = await tx.get(videoRef);
+        const parentRef = parentId ? doc(database, COLLECTIONS.comments, parentId) : null;
+        const pSnap = parentRef ? await tx.get(parentRef) : null;
+
+        // WRITE PHASE: all reads above are complete.
         tx.delete(commentRef);
         // Delete all replies
         repliesSnap.docs.forEach((d) => tx.delete(d.ref));
         // Delete all comment likes
         likesSnap.docs.forEach((d) => tx.delete(d.ref));
         // Decrement video commentsCount atomically
-        const vSnap = await tx.get(videoRef);
         if (vSnap.exists()) {
           tx.update(videoRef, { commentsCount: increment(-(1 + replyCount)) });
         }
-        // Decrement parent repliesCount atomically
-        if (parentId) {
-          const parentRef = doc(database, COLLECTIONS.comments, parentId);
-          const pSnap = await tx.get(parentRef);
-          if (pSnap.exists()) {
-            tx.update(parentRef, { repliesCount: increment(-1) });
-          }
+        if (parentRef && pSnap?.exists()) {
+          tx.update(parentRef, { repliesCount: increment(-1) });
         }
       });
     } catch (err) {
@@ -891,10 +884,9 @@ export const commentRepository = {
 
     try {
       await runTransaction(database, async (tx: Transaction) => {
-        // READ PHASE: Get all data before any writes
         const cSnap = await tx.get(commentRef);
         
-        // WRITE PHASE: Execute all writes after reads
+        // WRITE PHASE: all reads above are complete.
         if (isLiked && existingSnap.docs[0]) {
           tx.delete(existingSnap.docs[0].ref);
           if (cSnap.exists()) {
@@ -1059,8 +1051,10 @@ export const bookmarkRepository = {
     const videoRef = doc(database, COLLECTIONS.videos, videoId);
     try {
       await runTransaction(database, async (tx: Transaction) => {
-        snap.docs.forEach((d) => tx.delete(d.ref));
         const vSnap = await tx.get(videoRef);
+
+        // WRITE PHASE: all reads above are complete.
+        snap.docs.forEach((d) => tx.delete(d.ref));
         if (vSnap.exists()) {
           tx.update(videoRef, { bookmarksCount: increment(-1) });
         }
@@ -1259,20 +1253,27 @@ export const followRepository = {
 
     try {
       await runTransaction(database, async (tx: Transaction) => {
-        if (isFollowing && existingSnap.docs[0]) {
+        const followSnap = await tx.get(query(
+          collection(database, COLLECTIONS.follows),
+          where('followerId', '==', followerId),
+          where('followingId', '==', followingId),
+          limit(1),
+        ));
+        const fSnap = await tx.get(followingRef);
+        const erSnap = await tx.get(followerRef);
+        const currentlyFollowing = !followSnap.empty;
+
+        // WRITE PHASE: all reads above are complete.
+        if (currentlyFollowing) {
           // Unfollow
-          tx.delete(existingSnap.docs[0].ref);
-          const fSnap = await tx.get(followingRef);
+          tx.delete(followSnap.docs[0].ref);
           if (fSnap.exists()) tx.update(followingRef, { followersCount: increment(-1) });
-          const erSnap = await tx.get(followerRef);
           if (erSnap.exists()) tx.update(followerRef, { followingCount: increment(-1) });
         } else {
           // Follow — create relationship doc
           const newFollowRef = doc(collection(database, COLLECTIONS.follows));
           tx.set(newFollowRef, { followerId, followingId, createdAt: Date.now() } as Omit<Follow, 'id'>);
-          const fSnap = await tx.get(followingRef);
           if (fSnap.exists()) tx.update(followingRef, { followersCount: increment(1) });
-          const erSnap = await tx.get(followerRef);
           if (erSnap.exists()) tx.update(followerRef, { followingCount: increment(1) });
         }
       });
@@ -1334,16 +1335,23 @@ export const subscriptionRepository = {
 
     try {
       await runTransaction(database, async (tx: Transaction) => {
-        if (isSubscribed && existingSnap.docs[0]) {
+        const subscriptionSnap = await tx.get(query(
+          collection(database, COLLECTIONS.subscriptions),
+          where('subscriberId', '==', subscriberId),
+          where('creatorId', '==', creatorId),
+          limit(1),
+        ));
+        const cSnap = await tx.get(creatorRef);
+
+        // WRITE PHASE: all reads above are complete.
+        if (!subscriptionSnap.empty) {
           // Unsubscribe
-          tx.delete(existingSnap.docs[0].ref);
-          const cSnap = await tx.get(creatorRef);
+          tx.delete(subscriptionSnap.docs[0].ref);
           if (cSnap.exists()) tx.update(creatorRef, { subscribersCount: increment(-1) });
         } else {
           // Subscribe — create one subscription per user per creator
           const newSubRef = doc(collection(database, COLLECTIONS.subscriptions));
           tx.set(newSubRef, { subscriberId, creatorId, createdAt: Date.now() } as Omit<Subscription, 'id'>);
-          const cSnap = await tx.get(creatorRef);
           if (cSnap.exists()) tx.update(creatorRef, { subscribersCount: increment(1) });
         }
       });

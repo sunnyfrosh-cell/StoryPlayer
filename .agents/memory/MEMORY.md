@@ -1,0 +1,1 @@
+- [Dependency validation](dependency-validation.md) — the Replit package firewall may block transitive npm tarballs during dependency installation.

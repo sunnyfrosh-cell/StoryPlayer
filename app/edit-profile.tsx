@@ -724,6 +724,7 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 54,
     backgroundColor: colors.card,
     borderRadius: radius.base,
     borderWidth: 1.5,
@@ -732,11 +733,12 @@ const styles = StyleSheet.create({
   inputIcon: {
     paddingLeft: spacing.base,
     paddingRight: spacing.sm,
-    height: '100%',
+    alignSelf: 'stretch',
     justifyContent: 'center',
   },
   textInput: {
     flex: 1,
+    minHeight: 52,
     color: colors.text,
     fontFamily: 'Inter-Regular',
     fontSize: 15,

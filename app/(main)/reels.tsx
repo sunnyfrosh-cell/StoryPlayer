@@ -18,16 +18,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { ViewToken } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Play, X, Loader as Loader2 } from 'lucide-react-native';
+import { Play, X } from 'lucide-react-native';
 import type { DocumentSnapshot } from 'firebase/firestore';
 import { router } from 'expo-router';
 import type { Reel } from '@/types';
 import { reelRepository } from '@/firebase';
 import { useAuth, useToast } from '@/contexts';
 import { colors, spacing, typography } from '@/theme';
-import { shareVideo, copyLink } from '@/utils';
+import { shareVideo } from '@/utils';
 import { ReelItem } from '@/components/ReelItem';
-import { ReelCommentSheet } from '@/components/ReelCommentSheet';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
@@ -57,10 +56,7 @@ export default function ReelsScreen() {
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [saveCounts, setSaveCounts] = useState<Record<string, number>>({});
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
-  const [showComments, setShowComments] = useState(false);
   const [isScreenFocused, setIsScreenFocused] = useState(true);
-  const [commentReelId, setCommentReelId] = useState<string | null>(null);
-  const [commentCreatorId, setCommentCreatorId] = useState<string>('');
   const [shareSheetReel, setShareSheetReel] = useState<Reel | null>(null);
 
   const viewedReelsRef = useRef<Set<string>>(new Set());
@@ -311,18 +307,13 @@ export default function ReelsScreen() {
     }
   }, []);
 
-  // Comment handler — open bottom sheet
+  // Comments use a normal full-screen route instead of an animated bottom sheet.
   const handleComment = useCallback((reel: Reel) => {
-    setCommentReelId(reel.id);
-    setCommentCreatorId(reel.creatorId);
-    setShowComments(true);
+    router.push({
+      pathname: '/reel-comments',
+      params: { reelId: reel.id, creatorId: reel.creatorId },
+    });
   }, []);
-
-  // Comment count change callback
-  const handleCommentCountChange = useCallback((count: number) => {
-    if (!commentReelId) return;
-    setCommentCounts((prev) => ({ ...prev, [commentReelId]: count }));
-  }, [commentReelId]);
 
   const handleCreatorPress = useCallback((reel: Reel) => {
     router.push(`/profile?creatorId=${reel.creatorId}`);
@@ -351,7 +342,7 @@ export default function ReelsScreen() {
     ({ item: reel, index }: { item: Reel; index: number }) => (
       <ReelItem
         reel={reel}
-        isActive={index === activeIndex && isScreenFocused && !showComments}
+        isActive={index === activeIndex && isScreenFocused}
         isLiked={likedReels.has(reel.id)}
         isSaved={savedReels.has(reel.id)}
         isFollowing={followingCreators.has(reel.creatorId)}
@@ -368,7 +359,7 @@ export default function ReelsScreen() {
       />
     ),
     [
-      activeIndex, isScreenFocused, showComments, likedReels, savedReels, followingCreators,
+      activeIndex, isScreenFocused, likedReels, savedReels, followingCreators,
       likeCounts, saveCounts, commentCounts,
       handleLike, handleSave, handleShare, handleComment, handleFollow,
       handleCreatorPress, handleWatchProgress,
@@ -423,8 +414,6 @@ export default function ReelsScreen() {
     );
   }
 
-  const activeReel = state.reels[activeIndex];
-
   return (
     <>
       <StatusBar style="light" />
@@ -448,17 +437,6 @@ export default function ReelsScreen() {
         />
       </SafeAreaView>
 
-      {/* Comment bottom sheet — only mounted while open */}
-      {commentReelId && showComments && (
-        <ReelCommentSheet
-          visible={showComments}
-          reelId={commentReelId}
-          creatorId={commentCreatorId}
-          commentCount={commentCounts[commentReelId] ?? activeReel?.commentsCount ?? 0}
-          onClose={() => setShowComments(false)}
-          onCommentCountChange={handleCommentCountChange}
-        />
-      )}
     </>
   );
 }

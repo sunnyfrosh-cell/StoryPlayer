@@ -52,8 +52,10 @@ export default function SettingsPreferenceScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const params = useLocalSearchParams<{ preference?: string; value?: string }>();
-  const config = preferences[(params.preference ?? 'language') as PreferenceKey] ?? preferences.language;
-  const [selected, setSelected] = useState(params.value ?? config.options[0].value);
+  const preferenceKey = typeof params.preference === 'string' ? params.preference : 'language';
+  const config = preferences[preferenceKey as PreferenceKey] ?? preferences.language;
+  const initialValue = typeof params.value === 'string' ? params.value : config.options[0].value;
+  const [selected, setSelected] = useState(initialValue);
 
   const selectedLabel = useMemo(
     () => config.options.find((option) => option.value === selected)?.label ?? selected,

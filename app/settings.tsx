@@ -9,6 +9,7 @@ import {
   Switch,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SharingShare from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -108,23 +109,25 @@ export default function SettingsScreen() {
   const [downloadQuality, setDownloadQuality] = useState('Auto');
   const [playbackSpeed, setPlaybackSpeed] = useState('1x');
 
-  useEffect(() => {
-    let active = true;
-    AsyncStorage.multiGet([
-      'storyverse.preference.language',
-      'storyverse.preference.theme',
-      'storyverse.preference.downloadQuality',
-      'storyverse.preference.playbackSpeed',
-    ]).then((entries) => {
-      if (!active) return;
-      const values = Object.fromEntries(entries);
-      if (values['storyverse.preference.language']) setLanguage(values['storyverse.preference.language']);
-      if (values['storyverse.preference.theme']) setTheme(values['storyverse.preference.theme']);
-      if (values['storyverse.preference.downloadQuality']) setDownloadQuality(values['storyverse.preference.downloadQuality']);
-      if (values['storyverse.preference.playbackSpeed']) setPlaybackSpeed(values['storyverse.preference.playbackSpeed']);
-    }).catch(() => undefined);
-    return () => { active = false; };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      AsyncStorage.multiGet([
+        'storyverse.preference.language',
+        'storyverse.preference.theme',
+        'storyverse.preference.downloadQuality',
+        'storyverse.preference.playbackSpeed',
+      ]).then((entries) => {
+        if (!active) return;
+        const values = Object.fromEntries(entries);
+        if (values['storyverse.preference.language']) setLanguage(values['storyverse.preference.language']);
+        if (values['storyverse.preference.theme']) setTheme(values['storyverse.preference.theme']);
+        if (values['storyverse.preference.downloadQuality']) setDownloadQuality(values['storyverse.preference.downloadQuality']);
+        if (values['storyverse.preference.playbackSpeed']) setPlaybackSpeed(values['storyverse.preference.playbackSpeed']);
+      }).catch(() => undefined);
+      return () => { active = false; };
+    }, []),
+  );
 
   const openPreference = useCallback((preference: string, value: string) => {
     router.push({
@@ -132,36 +135,6 @@ export default function SettingsScreen() {
       params: { preference, value },
     });
   }, []);
-
-  const languageOptions = [
-    { label: 'English', value: 'English' },
-    { label: 'Español', value: 'Español' },
-    { label: 'Français', value: 'Français' },
-    { label: 'Deutsch', value: 'Deutsch' },
-    { label: '日本語', value: '日本語' },
-    { label: '中文', value: '中文' },
-    { label: 'हिन्दी', value: 'हिन्दी' },
-    { label: 'العربية', value: 'العربية' },
-  ];
-  const themeOptions = [
-    { label: 'Dark', value: 'Dark' },
-    { label: 'Light', value: 'Light' },
-    { label: 'System Default', value: 'System' },
-  ];
-  const qualityOptions = [
-    { label: 'Auto (recommended)', value: 'Auto' },
-    { label: 'Low (480p)', value: '480p' },
-    { label: 'Medium (720p)', value: '720p' },
-    { label: 'High (1080p)', value: '1080p' },
-  ];
-  const speedOptions = [
-    { label: '0.5x', value: '0.5x' },
-    { label: '0.75x', value: '0.75x' },
-    { label: 'Normal (1x)', value: '1x' },
-    { label: '1.25x', value: '1.25x' },
-    { label: '1.5x', value: '1.5x' },
-    { label: '2x', value: '2x' },
-  ];
 
   const toggleWithToast = useCallback(
     (setter: BooleanSetter) => () => {
