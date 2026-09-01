@@ -336,6 +336,19 @@ export async function uploadAvatar(uid: string, uri: string, options?: UploadOpt
   return uploadToCloudinary(uri, `avatars/${uid}`, 'avatar', 'image', options);
 }
 
+export function getCloudinaryVideoThumbnailUrl(videoUrl: string, width = 640, height = 360): string | undefined {
+  if (!videoUrl || !CLOUDINARY_CONFIG.cloudName) return undefined;
+
+  const trimmed = videoUrl.trim();
+  const match = trimmed.match(/https?:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/(?:.+\/)?(?<publicId>.+?)(?:\.[a-z0-9]+)?(?:\?.*)?$/i);
+  if (!match?.groups?.publicId) return undefined;
+
+  const publicId = decodeURIComponent(match.groups.publicId).replace(/^\//, '').replace(/\/$/, '');
+  if (!publicId) return undefined;
+
+  return `https://res.cloudinary.com/${CLOUDINARY_CONFIG.cloudName}/video/upload/so_0,c_fill,w_${width},h_${height}/${publicId}.jpg`;
+}
+
 export async function uploadVideoThumbnail(videoId: string, uri: string, options?: UploadOptions): Promise<UploadResult> {
   return uploadToCloudinary(uri, `videos/${videoId}`, 'thumb', 'image', options);
 }

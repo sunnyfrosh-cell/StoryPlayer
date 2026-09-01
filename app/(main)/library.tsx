@@ -36,7 +36,7 @@ import type {
 } from '@/types';
 import { useVideos, useAuth, useToast } from '@/contexts';
 import { colors, spacing, radius, typography, shadows } from '@/theme';
-import { formatCount, timeAgo } from '@/utils';
+import { formatCount, getVideoThumbnailSource, timeAgo } from '@/utils';
 import {
   VideoCard,
   EmptyState,
@@ -368,14 +368,15 @@ export default function LibraryScreen() {
                   ),
                 )
               : 0;
+          const historySource = getVideoThumbnailSource(item.video.thumbnailUrl, item.video.videoUrl);
           return (
             <Pressable
               style={styles.historyItem}
               onPress={() => router.push(`/watch/${item.video.id}`)}
             >
               <ImageBackground
-                source={{ uri: item.video.thumbnailUrl }}
-                style={styles.historyThumb}
+                source={historySource}
+                style={[styles.historyThumb, !historySource && { backgroundColor: colors.card }]}
                 imageStyle={styles.historyThumbImage}
               >
                 <LinearGradient

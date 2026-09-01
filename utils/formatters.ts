@@ -1,3 +1,5 @@
+import { getCloudinaryVideoThumbnailUrl } from '@/services';
+
 export function formatCount(n: number): string {
   if (n >= 1_000_000) {
     return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
@@ -47,4 +49,16 @@ export function normalizeMediaUri(uri?: string | null): string | undefined {
 export function getImageSource(uri?: string | null): { uri: string } | undefined {
   const normalized = normalizeMediaUri(uri);
   return normalized ? { uri: normalized } : undefined;
+}
+
+export function getVideoThumbnailSource(thumbnailUrl?: string | null, videoUrl?: string | null): { uri: string } | undefined {
+  const direct = normalizeMediaUri(thumbnailUrl);
+  if (direct) return { uri: direct };
+
+  if (videoUrl) {
+    const derived = getCloudinaryVideoThumbnailUrl(videoUrl);
+    if (derived) return { uri: derived };
+  }
+
+  return undefined;
 }

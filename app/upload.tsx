@@ -21,6 +21,7 @@ import {
   uploadVideoThumbnail,
   isCloudinaryConfigured,
   getCloudinaryConfigDiagnostics,
+  getCloudinaryVideoThumbnailUrl,
   UploadError,
   type UploadResult,
 } from '@/services';
@@ -272,11 +273,9 @@ export default function UploadVideoScreen() {
         }
       }
 
-      // Fallback: auto-generate thumbnail from video URL
+      // Fallback: derive a Cloudinary thumbnail from the uploaded video URL.
       if (!finalThumbUrl) {
-        finalThumbUrl = finalVideoUrl
-          ? finalVideoUrl.replace(/\/upload\/[^/]+\/videos\//, '/upload/c_thumb,w_640,h_360,g_face/videos/')
-          : '';
+        finalThumbUrl = finalVideoUrl ? getCloudinaryVideoThumbnailUrl(finalVideoUrl) ?? '' : '';
       }
 
       const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);

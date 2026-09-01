@@ -112,23 +112,37 @@ export default function SettingsScreen() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      AsyncStorage.getMany([
+      const preferenceKeys = [
         'storyverse.preference.language',
         'storyverse.preference.theme',
         'storyverse.preference.downloadQuality',
         'storyverse.preference.playbackSpeed',
-      ]).then((entries) => {
-        if (!active) return;
-        if (entries['storyverse.preference.language']) setLanguage(entries['storyverse.preference.language']);
-        if (entries['storyverse.preference.theme']) setTheme(entries['storyverse.preference.theme']);
-        if (entries['storyverse.preference.downloadQuality']) setDownloadQuality(entries['storyverse.preference.downloadQuality']);
-        if (entries['storyverse.preference.playbackSpeed']) setPlaybackSpeed(entries['storyverse.preference.playbackSpeed']);
-      }).catch((error) => {
-        if (active) {
-          console.error('[Settings] Failed to load preferences:', error);
-          toast.error('Could not load saved preferences');
-        }
-      });
+      ];
+
+      Promise.all(preferenceKeys.map((key) => AsyncStorage.getItem(key)))
+        .then(([languagePreference, themePreference, downloadQualityPreference, playbackSpeedPreference]) => {
+          if (!active) return;
+
+          if (languagePreference != null && languagePreference !== '') {
+            setLanguage(languagePreference);
+          }
+          if (themePreference != null && themePreference !== '') {
+            setTheme(themePreference);
+          }
+          if (downloadQualityPreference != null && downloadQualityPreference !== '') {
+            setDownloadQuality(downloadQualityPreference);
+          }
+          if (playbackSpeedPreference != null && playbackSpeedPreference !== '') {
+            setPlaybackSpeed(playbackSpeedPreference);
+          }
+        })
+        .catch((error) => {
+          if (active) {
+            console.error('[Settings] Failed to load preferences:', error);
+            toast.error('Could not load saved preferences');
+          }
+        });
+
       return () => { active = false; };
     }, [toast]),
   );

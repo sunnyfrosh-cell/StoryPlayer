@@ -14,6 +14,7 @@ import {
   Platform,
   StatusBar,
   PanResponder,
+  ImageBackground,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -51,6 +52,7 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 export interface ReelVideoPlayerProps {
   videoUrl: string;
+  thumbnailUrl?: string;
   isActive: boolean;
   onDoubleTapLike: () => void;
   onWatchProgress?: (watchSeconds: number, durationSeconds: number) => void;
@@ -58,6 +60,7 @@ export interface ReelVideoPlayerProps {
 
 function ReelVideoPlayerBase({
   videoUrl,
+  thumbnailUrl,
   isActive,
   onDoubleTapLike,
   onWatchProgress,
@@ -379,6 +382,21 @@ function ReelVideoPlayerBase({
 
   return (
     <View style={[styles.container, isFullscreen && styles.fullscreenContainer, { height: playerHeight }]}>
+      {/* Poster fallback before playback starts */}
+      {thumbnailUrl ? (
+        <ImageBackground
+          source={{ uri: thumbnailUrl }}
+          style={[styles.poster, !isPlaying && styles.posterVisible, isBuffering && styles.posterVisible]}
+          imageStyle={styles.posterImage}
+        >
+          <View style={styles.posterOverlay}>
+            <View style={styles.posterPlayCircle}>
+              <Play size={28} color={colors.text} fill={colors.text} />
+            </View>
+          </View>
+        </ImageBackground>
+      ) : null}
+
       {/* Video view */}
       <VideoView
         player={player}
@@ -513,6 +531,32 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   video: { width: '100%', height: '100%' },
+  poster: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0,
+    backgroundColor: colors.card,
+    zIndex: 1,
+  },
+  posterVisible: {
+    opacity: 1,
+  },
+  posterImage: {
+    resizeMode: 'cover',
+  },
+  posterOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.16)',
+  },
+  posterPlayCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: 'rgba(124,58,237,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bufferingOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',

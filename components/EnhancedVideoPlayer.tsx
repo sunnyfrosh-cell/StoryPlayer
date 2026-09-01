@@ -6,6 +6,7 @@ import {
   Pressable,
   Dimensions,
   Platform,
+  ImageBackground,
 } from 'react-native';
 import { ResizeMode, Video as ExpoVideo, type AVPlaybackStatus } from 'expo-av';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -47,6 +48,8 @@ export interface EnhancedVideoPlayerProps {
   onEnd?: () => void;
   /** Called when the user toggles fullscreen. */
   onFullscreenChange?: (isFullscreen: boolean) => void;
+  /** Optional poster image shown while the video is loading or before playback. */
+  thumbnailUrl?: string;
   /** Whether to auto-advance when the video ends. */
   autoPlayNext?: boolean;
 }
@@ -68,6 +71,7 @@ export function EnhancedVideoPlayer({
   onProgress,
   onEnd,
   onFullscreenChange,
+  thumbnailUrl,
   autoPlayNext = false,
 }: EnhancedVideoPlayerProps) {
   const videoRef = useRef<ExpoVideo | null>(null);
@@ -262,6 +266,21 @@ export function EnhancedVideoPlayer({
 
   return (
     <View style={[styles.container, isFullscreen && styles.fullscreenContainer]}>
+      {thumbnailUrl ? (
+        <ImageBackground
+          source={{ uri: thumbnailUrl }}
+          style={[styles.poster, !isReady && styles.posterVisible, isFullscreen && styles.fullscreenPoster]}
+          imageStyle={styles.posterImage}
+        >
+          {!isReady ? (
+            <View style={styles.posterOverlay}>
+              <View style={styles.posterPlayCircle}>
+                <Play size={28} color={colors.text} fill={colors.text} />
+              </View>
+            </View>
+          ) : null}
+        </ImageBackground>
+      ) : null}
       <ExpoVideo
         ref={videoRef}
         source={{ uri: activeUri }}
@@ -428,6 +447,36 @@ const styles = StyleSheet.create({
   fullscreenVideo: {
     width: '100%',
     height: '100%',
+  },
+  poster: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0,
+    backgroundColor: colors.card,
+    zIndex: 1,
+  },
+  posterVisible: {
+    opacity: 1,
+  },
+  fullscreenPoster: {
+    zIndex: 2,
+  },
+  posterImage: {
+    resizeMode: 'cover',
+  },
+  posterOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+  },
+  posterPlayCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: 'rgba(124,58,237,0.86)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.glow,
   },
   controlsOverlay: {
     ...StyleSheet.absoluteFillObject,

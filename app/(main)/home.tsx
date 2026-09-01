@@ -16,7 +16,7 @@ import { router } from 'expo-router';
 import type { Video, WatchHistoryItem, VideoCategory } from '@/types';
 import { useVideos, useAuth } from '@/contexts';
 import { colors, spacing, radius, typography, shadows } from '@/theme';
-import { formatCount, timeAgo } from '@/utils';
+import { formatCount, getVideoThumbnailSource, timeAgo } from '@/utils';
 import {
   VideoCard,
   ContinueWatchingCard,
@@ -195,11 +195,12 @@ export default function HomeScreen() {
 
   const renderHero = useCallback(() => {
     if (!heroVideo) return null;
+    const heroSource = getVideoThumbnailSource(heroVideo.thumbnailUrl, heroVideo.videoUrl);
     return (
       <Animated.View entering={FadeInDown.duration(600)}>
         <ImageBackground
-          source={{ uri: heroVideo.thumbnailUrl }}
-          style={styles.heroBg}
+          source={heroSource}
+          style={[styles.heroBg, !heroSource && { backgroundColor: colors.card }]}
           imageStyle={styles.heroImage}
         >
           <LinearGradient

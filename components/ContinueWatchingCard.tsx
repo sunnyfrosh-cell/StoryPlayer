@@ -8,7 +8,7 @@ import Animated, {
 import { Play } from 'lucide-react-native';
 import type { WatchHistoryItem, Video } from '@/types';
 import { colors, spacing, radius, typography, shadows } from '@/theme';
-import { formatSeconds, getImageSource, timeAgo } from '@/utils';
+import { formatSeconds, getVideoThumbnailSource, timeAgo } from '@/utils';
 
 interface ContinueWatchingCardProps {
   item: WatchHistoryItem;
@@ -31,7 +31,7 @@ export function ContinueWatchingCard({
   }));
 
   const progress = Math.min(1, item.progressSeconds / item.durationSeconds);
-  const coverSource = getImageSource(video?.thumbnailUrl);
+  const coverSource = getVideoThumbnailSource(video?.thumbnailUrl, video?.videoUrl);
 
   return (
     <Animated.View style={[{ width }, animatedStyle, shadows.lg]}>

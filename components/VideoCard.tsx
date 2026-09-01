@@ -8,7 +8,7 @@ import Animated, {
 import { Play, Eye, Clock } from 'lucide-react-native';
 import type { Video } from '@/types';
 import { colors, spacing, radius, typography, shadows } from '@/theme';
-import { formatCount, formatDuration, getImageSource } from '@/utils';
+import { formatCount, formatDuration, getVideoThumbnailSource } from '@/utils';
 import { Badge } from './Badge';
 
 interface VideoCardProps {
@@ -41,7 +41,7 @@ export function VideoCard({
 
   const isLandscape = variant === 'landscape';
   const aspectRatio = isLandscape ? 16 / 9 : 2 / 3;
-  const coverSource = getImageSource(video.thumbnailUrl);
+  const coverSource = getVideoThumbnailSource(video.thumbnailUrl, video.videoUrl);
 
   return (
     <Animated.View style={[{ width }, animatedStyle, shadows.md]}>

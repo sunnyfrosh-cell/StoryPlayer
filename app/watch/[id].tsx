@@ -26,7 +26,7 @@ import {
   watchHistoryRepository,
 } from '@/firebase';
 import { colors, spacing, radius, typography, shadows } from '@/theme';
-import { formatCount, timeAgo, shareVideo, copyLink } from '@/utils';
+import { formatCount, timeAgo, shareVideo, copyLink, getVideoThumbnailSource } from '@/utils';
 import { LoadingScreen, ErrorState, Avatar, EmptyState, Modal, EnhancedVideoPlayer } from '@/components';
 
 const SORT_OPTIONS: { label: string; value: CommentSort }[] = [
@@ -442,6 +442,7 @@ export default function WatchScreen() {
           {video.videoUrl ? (
             <EnhancedVideoPlayer
               source={{ uri: video.videoUrl }}
+              thumbnailUrl={getVideoThumbnailSource(video.thumbnailUrl, video.videoUrl)?.uri}
               initialPositionSeconds={resumePosition}
               autoPlay={autoPlay}
               autoPlayNext={autoPlayNextEnabled && related.length > 0}
@@ -693,24 +694,30 @@ export default function WatchScreen() {
               {related.length === 0 ? (
                 <EmptyState icon={VideoIcon} title="No related videos" description="Check back later" />
               ) : (
-                related.map((rv) => (
-                  <Pressable key={rv.id} onPress={() => router.push(`/watch/${rv.id}`)}>
-                    <View style={styles.relatedItem}>
-                      <Image source={{ uri: rv.thumbnailUrl }} style={styles.relatedThumb} />
-                      <View style={styles.relatedMeta}>
+                related.map((rv) => {
+                  const relatedSource = getVideoThumbnailSource(rv.thumbnailUrl, rv.videoUrl);
+                  return (
+                    <Pressable key={rv.id} onPress={() => router.push(`/watch/${rv.id}`)}>
+                      <View style={styles.relatedItem}>
+                        <Image
+                          source={relatedSource}
+                          style={[styles.relatedThumb, !relatedSource && { backgroundColor: colors.card }]}
+                        />
+                        <View style={styles.relatedMeta}>
                         <Text style={[typography.label, { color: colors.text }]} numberOfLines={2}>
                           {rv.title}
                         </Text>
                         <Text style={[typography.caption, { color: colors.textMuted }]} numberOfLines={1}>
                           {rv.creatorName}
                         </Text>
-                        <Text style={[typography.caption, { color: colors.textMuted }]}>
-                          {formatCount(rv.viewsCount)} views · {timeAgo(rv.createdAt)}
-                        </Text>
+                          <Text style={[typography.caption, { color: colors.textMuted }]}>
+                            {formatCount(rv.viewsCount)} views · {timeAgo(rv.createdAt)}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
-                  </Pressable>
-                ))
+                    </Pressable>
+                  );
+                })
               )}
             </View>
           )}

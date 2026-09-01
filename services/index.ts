@@ -10,6 +10,7 @@ export {
   getCloudinaryConfigDiagnostics,
   CLOUDINARY_CONFIG,
   UploadError,
+  getCloudinaryVideoThumbnailUrl,
 } from './cloudinary';
 export type { UploadResult, UploadOptions, UploadErrorType } from './cloudinary';
 export {

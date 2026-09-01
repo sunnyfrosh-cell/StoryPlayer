@@ -165,6 +165,7 @@ function ReelItemBase({
       {/* Video player */}
       <ReelVideoPlayer
         videoUrl={reel.videoUrl}
+        thumbnailUrl={reel.thumbnailUrl || undefined}
         isActive={isActive}
         onDoubleTapLike={handleDoubleTapLike}
         onWatchProgress={onWatchProgress}
